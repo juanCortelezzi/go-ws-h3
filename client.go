@@ -76,9 +76,9 @@ func (c *Client) ReadPump() {
 			break
 		}
 
-		c.Hub.FromSocket <- &ServerMsg{
-			ClientID: c.ID,
-			Msg:      mobileMsg,
+		c.Hub.FromSocket <- &MsgFromClient{
+			Client: c,
+			Msg:    mobileMsg,
 		}
 	}
 }

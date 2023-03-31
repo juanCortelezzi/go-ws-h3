@@ -5,7 +5,6 @@ go 1.20
 require (
 	github.com/gofiber/fiber/v2 v2.43.0
 	github.com/gofiber/websocket/v2 v2.1.5
-	github.com/joho/godotenv v1.5.1
 )
 
 require (

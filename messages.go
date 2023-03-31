@@ -18,24 +18,15 @@ type Msg[T any] struct {
 	Data T      `json:"data"`
 }
 
-func NewEventMsg(t string) *Msg[interface{}] {
-	return &Msg[interface{}]{
-		Type: t,
-		Data: nil,
-	}
-}
-
-func (m *Msg[T]) toBytes() []byte {
-	bytes, err := json.Marshal(m)
-	if err != nil {
-		panic(fmt.Sprintf("failed to parse message: %s", err))
-	}
-	return bytes
-}
-
-type ServerMsg struct {
-	ClientID int32
+type MsgFromClient struct {
+	Client *Client
 	Msg[json.RawMessage]
+}
+
+type MsgFromServer struct {
+	To      int32
+	OneShot chan<- error
+	Msg[interface{}]
 }
 
 type LocationData struct {
@@ -48,6 +39,21 @@ type PhoneInfoData struct {
 	Name        string  `json:"name"`
 	Battery     float32 `json:"battery"`
 	Temperature float32 `json:"temp"`
+}
+
+func NewEventMsg(t string) Msg[interface{}] {
+	return Msg[interface{}]{
+		Type: t,
+		Data: nil,
+	}
+}
+
+func (m Msg[T]) toBytes() []byte {
+	bytes, err := json.Marshal(m)
+	if err != nil {
+		panic(fmt.Sprintf("failed to parse message: %s", err))
+	}
+	return bytes
 }
 
 func parseMessage[T any](data []byte) (*T, error) {

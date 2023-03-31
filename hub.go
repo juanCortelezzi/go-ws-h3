@@ -1,33 +1,26 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 )
 
-var Hub *ConnectionHub
-
-func Create() {
-	if Hub != nil {
-		log.Println("DATABASE: already connected")
-		return
-	}
-	Hub = NewHub()
-}
-
 type ConnectionHub struct {
 	Clients    map[int32]*Client
+	FromSocket chan *MsgFromClient
+	FromServer chan *MsgFromServer
 	Register   chan *Client
-	FromSocket chan *ServerMsg
 	Unregister chan *Client
 }
 
 func NewHub() *ConnectionHub {
 	return &ConnectionHub{
 		Clients:    make(map[int32]*Client),
+		FromSocket: make(chan *MsgFromClient),
+		FromServer: make(chan *MsgFromServer),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
-		FromSocket: make(chan *ServerMsg),
 	}
 }
 
@@ -59,18 +52,23 @@ func (h *ConnectionHub) Run() {
 
 			case TypeTrigger:
 				// NOTE: this message event is only for testing purposes
-				client, exists := h.Clients[msg.ClientID]
-				if !exists {
-					panic("how does it not exist? this should have never happened")
-				}
-
-				client.Send <- NewEventMsg(TypeTakePhoto).toBytes()
+				msg.Client.Send <- NewEventMsg("Trigger").toBytes()
 
 			default:
-				if client, exists := h.Clients[msg.ClientID]; exists {
+				if client, exists := h.Clients[msg.Client.ID]; exists {
 					DeleteClient(h.Clients, client)
 				}
 			}
+
+		case msg := <-h.FromServer:
+			if client, exists := h.Clients[msg.To]; exists {
+				client.Send <- msg.toBytes()
+				msg.OneShot <- nil
+				close(msg.OneShot)
+				continue
+			}
+			msg.OneShot <- errors.New("Client not found")
+			close(msg.OneShot)
 
 		case client := <-h.Register:
 			h.Clients[client.ID] = client

@@ -2,7 +2,10 @@ package main
 
 import (
 	"log"
+	"net/http"
+	"strconv"
 	"sync/atomic"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -18,7 +21,7 @@ func (u *UserIdentifier) GetId() int32 {
 	return u.id.Add(1)
 }
 
-var userIdentifier *UserIdentifier
+var userIdentifier UserIdentifier
 
 func main() {
 	hub := NewHub()
@@ -38,10 +41,36 @@ func main() {
 		return fiber.ErrUpgradeRequired
 	})
 
-	app.Get("/", websocket.New(func(c *websocket.Conn) {
+	app.Get("/takephoto/:id", func(c *fiber.Ctx) error {
+		log.Println("hit")
+		rawid := c.Params("id")
+		id, err := strconv.Atoi(rawid)
+		if err != nil {
+			return c.SendStatus(http.StatusBadRequest)
+		}
+
+		oneShot := make(chan error)
+		hub.FromServer <- &MsgFromServer{
+			To:      int32(id), // HACK: this may fail.
+			OneShot: oneShot,
+			Msg:     NewEventMsg(TypeTakePhoto),
+		}
+
+		select {
+		case err := <-oneShot:
+			if err != nil {
+				return fiber.NewError(http.StatusBadRequest, err.Error())
+			}
+			return c.SendStatus(http.StatusOK)
+		case <-time.After(1 * time.Second):
+			return fiber.NewError(http.StatusInternalServerError, "timeout")
+		}
+	})
+
+	app.Get("/ws", websocket.New(func(c *websocket.Conn) {
 		client := &Client{
 			ID:   userIdentifier.GetId(),
-			Hub:  Hub,
+			Hub:  hub,
 			Conn: c,
 			Send: make(chan []byte, 256),
 		}
