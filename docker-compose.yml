@@ -1,0 +1,19 @@
+# Use root/example as user/password credentials
+version: "3.1"
+name: websockets
+services:
+  redis:
+    image: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - "./.databases/redis/redis-data:/var/lib/redis"
+      - "./.databases/redis/redis.conf:/usr/local/etc/redis/redis.conf"
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    restart: unless-stopped
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"

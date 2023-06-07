@@ -3,14 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 )
 
 const (
 	TypeLocation  = "location"
-	TypePhoneInfo = "phoneInfo"
 	TypeTakePhoto = "takePhoto"
-	TypeTrigger   = "trigger"
 )
 
 type Msg[T any] struct {
@@ -30,9 +27,14 @@ type MsgFromServer struct {
 }
 
 type LocationData struct {
-	Timestamp time.Time `json:"time"`
-	Lat       string    `json:"lat"`
-	Lon       string    `json:"lon"`
+	// Timestamp time.Time `json:"time"`
+	Lat float64 `json:"lat"`
+	Lng float64 `json:"lng"`
+	ID  uint    `json:"id"`
+}
+
+type IDDdata struct {
+	Id uint `json:"id"`
 }
 
 type PhoneInfoData struct {
